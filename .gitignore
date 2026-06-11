@@ -170,5 +170,8 @@ dist
 .vscode
 
 #python stuff
-test.py
 .venv
+
+#Playground to understand how code works/mess with concepts
+test.py
+test.txt
