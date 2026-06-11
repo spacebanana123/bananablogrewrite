@@ -167,5 +167,5 @@ dist
 .wrangler/
 
 #vs code junk
-.venv
+.vscode
 test.py

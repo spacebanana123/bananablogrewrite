@@ -29,14 +29,15 @@ def copyStaticFiles():
 
 class entry:
     #TODO: Custom CSS support. 
-    def constructor(self,text:str,renderer:function = lambda x: x,extends:str = "default",tags:list = []) -> entry:
-        self.extends = extends
-        self.tags = tags
-        self.renderer = renderer
-        self.text = text
-        return self
+    def constructor(text:str,renderer:function = lambda x: x,extends:str = "default",tags:list = []) -> entry:
+        new_entry = entry()
+        new_entry.extends = extends
+        new_entry.tags = tags
+        new_entry.renderer = renderer
+        new_entry.text = text
+        return new_entry
     
-    #Print statement for debugging
+	#Print statement for debugging
     def print(self):
         print(f"Extends:{self.extends}\nTags:{self.tags}\nRender:{self.renderer}\nText:{self.text}\n")
 
@@ -65,7 +66,9 @@ def main():
 
     copyStaticFiles()
 
-    with open(TEMPLATES_DIR, "r") as template_folder:
+    with open(TEMPLATES_DIR, "") as template_folder:
+        if not os.path.isdir(template_folder):
+
         for template in template_folder:
             with open(template, "r") as template_text: 
                 template_entry = entry.constructor(template_text)
