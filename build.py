@@ -20,34 +20,55 @@ def initFolders():
 
 # We know that static files don't need to modified in any way and can be directly copied over to the public folder. 
 def copyStaticFiles():
+    #Check that we have static files at all. 
     if not (os.path.exists(STATIC_DIR)):
         return
     
+    #If we do, the flow ends up here, and we copy everthing.
     shutil.copytree(STATIC_DIR, PUBLIC_DIR)
 
-class template:
-    def constructor(self,renderer:function,text:str,extends:str = "default",tags:list = []):
+class entry:
+    #TODO: Custom CSS support. 
+    def constructor(self,text:str,renderer:function = lambda x: x,extends:str = "default",tags:list = []) -> entry:
         self.extends = extends
         self.tags = tags
         self.renderer = renderer
         self.text = text
+        return self
     
-    def render(self):
+    #Print statement for debugging
+    def print(self):
+        print(f"Extends:{self.extends}\nTags:{self.tags}\nRender:{self.renderer}\nText:{self.text}\n")
+
+    #Semantic sugar for rendering out an entry.
+    def render(self) -> dict:
         return self.renderer(self.text)
     
-    def extend(self):
-        with open()
-    
-
-
-
+    #Take rendered content and insert it into a template.
+    def extend(self) -> str:
+        #Check that template does actually exist.
+        if not os.path.isfile(self.extends):
+            return None
+        #Open file and replace.
+        with open(self.extends, "r") as template:
+            final_content = template.read()
+            entry_rendered = self.render()
+            for key in entry_rendered:
+                final_content.replace(f"<!--{key}-->",entry_rendered[key])
+            return final_content
+        return None
 
 def main():
-
     print("Build starting...")
 
     initFolders()
 
+    copyStaticFiles()
+
+    with open(TEMPLATES_DIR, "r") as template_folder:
+        for template in template_folder:
+            with open(template, "r") as template_text: 
+                template_entry = entry.constructor(template_text)
 
 if __name__ == '__main__':
     main()
