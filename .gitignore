@@ -168,4 +168,7 @@ dist
 
 #vs code junk
 .vscode
+
+#python stuff
 test.py
+.venv
