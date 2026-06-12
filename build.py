@@ -7,19 +7,18 @@ STATIC_DIR = os.path.join(ROOT_DIR,"static")
 ENTRIES_DIR = os.path.join(ROOT_DIR, "entries")
 TEMPLATES_DIR = os.path.join(ROOT_DIR, "templates")
 TEMP_DIR = os.path.join(ROOT_DIR, "temp")
+TEMP_TEMPLATES_DIR = os.path.join(TEMP_DIR,".templates")
 PUBLIC_DIR = os.path.join(ROOT_DIR,"public")
 DEFAULT_TEMPLATE_PATH = os.path.join(TEMPLATES_DIR,"default.html")
 
 # Clears out possible old files and then initialized new folders for us to use. 
 def initFolders():
-    dirs_to_clean = [PUBLIC_DIR,TEMP_DIR]
+    dirs_to_clean = [PUBLIC_DIR,TEMP_DIR,TEMP_TEMPLATES_DIR]
 
     for dir in dirs_to_clean:
         if os.path.exists(dir):
             shutil.rmtree(dir)
         os.makedirs(dir)
-    
-    os.mkdir(os.path.join(TEMP_DIR,"templates"))
 
 # We know that static files don't need to modified in any way and can be directly copied over to the public folder. 
 def copyStaticFiles():
@@ -84,17 +83,23 @@ class entry:
         return self.renderer(self.text)
     
     #Take rendered content and insert it into a template.
-    def extend(self) -> str:
+    #If render_level = -1, use the pre-rendering templates, instead of post rendering templates. 
+    def extend(self, render_level = 1) -> str:
+        #Setdir of template
+        template_path = os.path.join(TEMP_TEMPLATES_DIR,self.extends)
+        if render_level == -1:
+            template_path = os.path.join(TEMPLATES_DIR,self.extends)
         #Check that template does actually exist.
-        if not os.path.isfile(os.path.join(TEMP_DIR,"templates",self.extends)):
+        if not os.path.isfile(template_path):
             return None
         #Open file and replace based on keys from rendered content.
-        with open(os.path.join(TEMP_DIR,"templates",self.extends), "r") as template:
+        with open(template_path, "r") as template:
             final_content = template.read()
             entry_rendered = self.render()
             for key in entry_rendered:
                 final_content = final_content.replace(f"<!--{key}-->",entry_rendered[key])
             return final_content
+
 
 #Deal with all of the templates by treating them as entries. 
 def process_templates():
@@ -108,7 +113,7 @@ def process_templates():
         for template_path in templates:
             #Check if this is a default template. If so, we don't need to do any processing to it. 
             if template_path.endswith("default.html"):
-                shutil.copy(os.path.join(TEMPLATES_DIR,template_path),os.path.join(TEMP_DIR,"templates",template_path))
+                shutil.copy(os.path.join(TEMPLATES_DIR,template_path),os.path.join(TEMP_TEMPLATES_DIR,template_path))
             #If it isn't a default template, read it, pack it as a template entry and then have it extend whatever it is supposed to. 
             else:
                 with open(os.path.join(TEMPLATES_DIR,template_path),"r") as template:
@@ -116,7 +121,7 @@ def process_templates():
                     template_entry = entry.constructor(text,
                                                     render_template,
                                                     entry.extractExtends(text))
-                    with open(os.path.join(TEMP_DIR,"templates",template_path), "w") as out_template:
+                    with open(os.path.join(TEMP_TEMPLATES_DIR,template_path), "w") as out_template:
                         text_to_write = template_entry.extend()
                         if text_to_write == None:
                             #None means there is a missing template file
@@ -132,7 +137,7 @@ def process_templates():
         templates = next_templates
 
 def process_entries():
-    entries = os.listdir(entries)
+    entries = os.listdir(ENTRIES_DIR)
     tag_tracker = {}
     for file in entries:
         #Steps to the process:
@@ -148,7 +153,7 @@ def process_entries():
 
             #TODO: Finding render function needs implementation. Maybe another keyword would work. 
             #For now we will use a general function
-            renderer = render_generic_entry()
+            renderer = render_generic_entry
 
             tags = entry.extractTags(entry_text)
 
@@ -173,27 +178,36 @@ def process_entries():
     
     #Writing tag pages. 
     for tag in tag_tracker:
-        if os.path.exists(os.path.join(TEMP_DIR,"templates",f"{tag}.html")):
+        if os.path.exists(os.path.join(TEMP_TEMPLATES_DIR,f"{tag}.html")):
             tag_template = f"{tag}.html" #We have a tag specific template
         else: 
             tag_template = "tag.html" #Use the default tag template
         tag_tracker[tag] = sorted(tag_tracker[tag], key=operator.methodcaller("key"))
         for tagged_entry in tag_tracker[tag]:
-            text_to_write = tagged_entry.extend()
+            text_to_write = tagged_entry.render()["body"]
             if text_to_write == None:
                 continue
             else: 
-                entry_text += text_to_write + "\n"
+                entry_text += f"<div>{text_to_write}</div>\n"
 
-        tag_entry = entry.constructor(entry_text,render_template,tag_template)
-        with open(os.path.join(TEMP_DIR,tag_template),"w") as out_file:
+        tag_entry = entry.constructor(entry_text,render_tag,tag_template)
+        with open(os.path.join(TEMP_DIR,f"{tag}.html"),"w") as out_file:
             text_to_write = tag_entry.extend()
             if text_to_write == None:
                 continue
             else: 
                 out_file.write(text_to_write)
 
-
+def export_temp_folder():
+    
+    for file in os.listdir(TEMP_DIR):
+        #ignore all files that start with .
+        #we can change this in the future to be more modifiable.
+        if not file.startswith("."):
+            if os.path.isdir(os.path.join(TEMP_DIR,file)):
+                shutil.copytree(os.path.join(TEMP_DIR,file), os.path.join(PUBLIC_DIR,file))
+            else: 
+                shutil.copy(os.path.join(TEMP_DIR,file), os.path.join(PUBLIC_DIR,file))
 
 # --- RENDER FUNCTIONS ---
 #Consider making this a different file? It would be more organized overall
@@ -210,7 +224,29 @@ def render_template(text:str):
     out_str = ""
     for out_line in out_lines:
         out_str += out_line + "\n"
-    return {"body":out_str}           
+    return {"body":out_str}          
+ 
+def render_tag(text:str):
+    lines = text.split("\n")
+    out_lines = []
+    tag = ""
+    description = "None entered"
+    for line in lines: 
+        if line.strip().startswith("\\"):
+            out_lines.append(line.strip()[1:len(line)])
+        elif line.strip().startswith("tag"):
+            tag = line.strip().split(None, 1)[1]
+        elif line.strip().startswith("description"):
+            description = line.strip().split(None, 1)[1]
+        else:
+            out_lines.append(line)
+    out_str = ""
+    for out_line in out_lines:
+        out_str += out_line + "\n"
+    return {"body":out_str,
+            "title": tag,
+            "tag": tag,
+            "description": description}          
 
 def render_generic_entry(text:str):
     lines = text.split("\n")
@@ -225,6 +261,8 @@ def render_generic_entry(text:str):
         elif line.strip().startswith("extends"):
             pass
         elif line.strip().startswith("tags"):
+            pass
+        elif line.strip().startswith("date"):
             pass
         else:
             body_lines.append(line)
@@ -249,6 +287,9 @@ def main():
 
     process_entries()
     print("Entries processed")
+
+    export_temp_folder()
+    print("Temp folder exported")
 
     
 if __name__ == '__main__':
