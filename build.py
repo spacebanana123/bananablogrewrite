@@ -20,6 +20,13 @@ def initFolders():
             shutil.rmtree(dir)
         os.makedirs(dir)
 
+def deleteFolders():
+    dirs_to_clean = [TEMP_DIR,TEMP_TEMPLATES_DIR]
+
+    for dir in dirs_to_clean:
+        if os.path.exists(dir):
+            shutil.rmtree(dir)
+
 # We know that static files don't need to modified in any way and can be directly copied over to the public folder. 
 def copyStaticFiles():
     #Check that we have static files at all. 
@@ -102,7 +109,7 @@ class entry:
 
 
 #Deal with all of the templates by treating them as entries. 
-def process_templates():
+def processTemplates():
     #Open all the templates. 
     templates = os.listdir(TEMPLATES_DIR)
     next_templates = []
@@ -119,7 +126,7 @@ def process_templates():
                 with open(os.path.join(TEMPLATES_DIR,template_path),"r") as template:
                     text = template.read()
                     template_entry = entry.constructor(text,
-                                                    render_template,
+                                                    renderTemplate,
                                                     entry.extractExtends(text))
                     with open(os.path.join(TEMP_TEMPLATES_DIR,template_path), "w") as out_template:
                         text_to_write = template_entry.extend()
@@ -136,7 +143,7 @@ def process_templates():
         counter += 1
         templates = next_templates
 
-def process_entries():
+def processEntries():
     entries = os.listdir(ENTRIES_DIR)
     tag_tracker = {}
     for file in entries:
@@ -153,7 +160,7 @@ def process_entries():
 
             #TODO: Finding render function needs implementation. Maybe another keyword would work. 
             #For now we will use a general function
-            renderer = render_generic_entry
+            renderer = renderGenericEntry
 
             tags = entry.extractTags(entry_text)
 
@@ -188,18 +195,17 @@ def process_entries():
             if text_to_write == None:
                 continue
             else: 
-                entry_text += f"<div>{text_to_write}</div>\n"
+                entry_text += text_to_write
 
-        tag_entry = entry.constructor(entry_text,render_tag,tag_template)
+        tag_entry = entry.constructor(entry_text,renderTag,tag_template)
         with open(os.path.join(TEMP_DIR,f"{tag}.html"),"w") as out_file:
-            text_to_write = tag_entry.extend()
+            text_to_write = tag_entry.extend() #TODO: THIS IS BROKEN.
             if text_to_write == None:
                 continue
             else: 
                 out_file.write(text_to_write)
 
-def export_temp_folder():
-    
+def exportTempFolder():
     for file in os.listdir(TEMP_DIR):
         #ignore all files that start with .
         #we can change this in the future to be more modifiable.
@@ -211,7 +217,7 @@ def export_temp_folder():
 
 # --- RENDER FUNCTIONS ---
 #Consider making this a different file? It would be more organized overall
-def render_template(text:str):
+def renderTemplate(text:str):
     lines = text.split("\n")
     out_lines = []
     for line in lines: 
@@ -226,7 +232,7 @@ def render_template(text:str):
         out_str += out_line + "\n"
     return {"body":out_str}          
  
-def render_tag(text:str):
+def renderTag(text:str):
     lines = text.split("\n")
     out_lines = []
     tag = ""
@@ -248,22 +254,24 @@ def render_tag(text:str):
             "tag": tag,
             "description": description}          
 
-def render_generic_entry(text:str):
+def renderGenericEntry(text:str):
     lines = text.split("\n")
     body_lines = []
     title = ""
+    keywords = ["extends", "tags", "date"]
     for line in lines:
+        keyword_flag = False
+        for keyword in keywords:
+            if line.strip().startswith(keyword):
+                keyword_flag = True
+                break
+        if keyword_flag:
+            continue
         if line.strip().startswith("\\"):
             body_lines.append(line.strip()[1:len(line)])
         elif line.strip().startswith("#"):            
             title = line.strip()[1:len(line)].strip()
             body_lines.append(title)
-        elif line.strip().startswith("extends"):
-            pass
-        elif line.strip().startswith("tags"):
-            pass
-        elif line.strip().startswith("date"):
-            pass
         else:
             body_lines.append(line)
 
@@ -282,15 +290,17 @@ def main():
     copyStaticFiles()
     print("Static files copied")
 
-    process_templates()
+    processTemplates()
     print("Templates rendered")
 
-    process_entries()
+    processEntries()
     print("Entries processed")
 
-    export_temp_folder()
+    exportTempFolder()
     print("Temp folder exported")
 
+    deleteFolders()
+    print("Temp folder deleted")
     
 if __name__ == '__main__':
     main()
