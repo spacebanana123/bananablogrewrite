@@ -1,5 +1,6 @@
 import os
 import shutil
+import operator
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(ROOT_DIR,"static")
@@ -18,6 +19,7 @@ def initFolders():
             shutil.rmtree(dir)
         os.makedirs(dir)
     
+    os.mkdir(os.path.join(TEMP_DIR,"templates"))
 
 # We know that static files don't need to modified in any way and can be directly copied over to the public folder. 
 def copyStaticFiles():
@@ -32,25 +34,50 @@ def copyStaticFiles():
 #We treat both entries and templates as entries. Both extend other things and can be rendered out. 
 class entry:
     #TODO: Custom CSS support. 
-    def constructor(text:str,renderer:function = lambda x: x,extends:str = "default.html",tags:list = []) -> entry:
+    def constructor(text:str,renderer:function = lambda x: x,extends:str = "default.html",tags:list = [],priority = 0,date = "yyyy-mm-dd hr:mm") -> entry:
         new_entry = entry()
         new_entry.extends = extends
         new_entry.tags = tags
         new_entry.renderer = renderer
         new_entry.text = text
+        new_entry.priority = priority
+        new_entry.date = date
         return new_entry
     
 	#Print statement for debugging
     def print(self):
         print(f"Extends:{self.extends}\nTags:{self.tags}\nRender:{self.renderer}\nText:{self.text}\n")
 
+    #Key for sorting
+    def key(self):
+        return (self.priority,self.date)
+
     def extractExtends(text:str):
         extends = "default.html"
         lines = text.split("\n")
         for line in lines: 
             if line.strip().startswith("extends"):
-                extends = line.strip().split(1)[1]
+                extends = line.strip().split(None, 1)[1]
+        if not extends.endswith(".html"):
+            extends += ".html"
         return extends
+
+    def extractTags(text:str):
+        tags = []
+        lines = text.split("\n")
+        for line in lines: 
+            if line.strip().startswith("tags"):
+                split_line = line.strip().split()
+                tags = split_line[1:len(split_line)]
+        return tags
+    
+    def extractDate(text:str):
+        date_entry = ""
+        lines = text.split("\n")
+        for line in lines: 
+            if line.strip().startswith("date"):
+                date_entry = line.strip().split(None, 1)[1]
+        return date_entry
 
     #Semantic sugar for rendering out an entry.
     def render(self) -> dict:
@@ -59,17 +86,117 @@ class entry:
     #Take rendered content and insert it into a template.
     def extend(self) -> str:
         #Check that template does actually exist.
-        if not os.path.isfile(os.path.join(TEMPLATES_DIR,self.extends)):
+        if not os.path.isfile(os.path.join(TEMP_DIR,"templates",self.extends)):
             return None
-        #Open file and replace.
-        with open(os.path.join(TEMPLATES_DIR,self.extends), "r") as template:
+        #Open file and replace based on keys from rendered content.
+        with open(os.path.join(TEMP_DIR,"templates",self.extends), "r") as template:
             final_content = template.read()
             entry_rendered = self.render()
             for key in entry_rendered:
-                final_content.replace(f"<!--{key}-->",entry_rendered[key])
+                final_content = final_content.replace(f"<!--{key}-->",entry_rendered[key])
             return final_content
-        return None
 
+#Deal with all of the templates by treating them as entries. 
+def process_templates():
+    #Open all the templates. 
+    templates = os.listdir(TEMPLATES_DIR)
+    next_templates = []
+    #Counter exists solely to have a HARD CAP on recursive behavior
+    # that could otherwise result from this method of processing
+    counter = 0
+    while counter == 0 or (counter < 100 and len(next_templates) > 0): 
+        for template_path in templates:
+            #Check if this is a default template. If so, we don't need to do any processing to it. 
+            if template_path.endswith("default.html"):
+                shutil.copy(os.path.join(TEMPLATES_DIR,template_path),os.path.join(TEMP_DIR,"templates",template_path))
+            #If it isn't a default template, read it, pack it as a template entry and then have it extend whatever it is supposed to. 
+            else:
+                with open(os.path.join(TEMPLATES_DIR,template_path),"r") as template:
+                    text = template.read()
+                    template_entry = entry.constructor(text,
+                                                    render_template,
+                                                    entry.extractExtends(text))
+                    with open(os.path.join(TEMP_DIR,"templates",template_path), "w") as out_template:
+                        text_to_write = template_entry.extend()
+                        if text_to_write == None:
+                            #None means there is a missing template file
+                            #That could be because the template file we are searching for is later in the queue
+                            #or dependent on some template later in the queue. 
+                            #thus by adding the template to the next list, 
+                            #we can process templates that are dependent on multiple layers of templates.
+                            #This DOES carry a performance penalty, which is a possibility for improvement. 
+                            next_templates.append(template_path)
+                        else: 
+                            out_template.write(text_to_write)
+        counter += 1
+        templates = next_templates
+
+def process_entries():
+    entries = os.listdir(entries)
+    tag_tracker = {}
+    for file in entries:
+        #Steps to the process:
+        #1. Find what template we should use. 
+        #2. Find what render function we shoud use
+        #3. Find and track tags. 
+        #4. Spit out processed html page for dedicated page for the entry. 
+        #5. Spit out tag pages
+        #6. Spit out index page that contains links to every tag and entry.
+        with open(os.path.join(ENTRIES_DIR,file)) as entry_file:
+            entry_text = entry_file.read()
+            template = entry.extractExtends(entry_text)
+
+            #TODO: Finding render function needs implementation. Maybe another keyword would work. 
+            #For now we will use a general function
+            renderer = render_generic_entry()
+
+            tags = entry.extractTags(entry_text)
+
+            entry_date = entry.extractTags(entry_text)
+
+            new_entry = entry.constructor(entry_text, renderer, template, tags,entry_date)
+            new_filename = file.split(".")[0] + ".html"
+
+            #tracking globally across all files all tags and files associated with those tags.
+            for tag in tags:
+                try:
+                    tag_tracker[tag].append(new_entry)
+                except:
+                    tag_tracker[tag] = [new_entry]
+
+            with open(os.path.join(TEMP_DIR,new_filename),"w") as out_file:
+                text_to_write = new_entry.extend()
+                if text_to_write == None:
+                    continue
+                else: 
+                    out_file.write(text_to_write)
+    
+    #Writing tag pages. 
+    for tag in tag_tracker:
+        if os.path.exists(os.path.join(TEMP_DIR,"templates",f"{tag}.html")):
+            tag_template = f"{tag}.html" #We have a tag specific template
+        else: 
+            tag_template = "tag.html" #Use the default tag template
+        tag_tracker[tag] = sorted(tag_tracker[tag], key=operator.methodcaller("key"))
+        for tagged_entry in tag_tracker[tag]:
+            text_to_write = tagged_entry.extend()
+            if text_to_write == None:
+                continue
+            else: 
+                entry_text += text_to_write + "\n"
+
+        tag_entry = entry.constructor(entry_text,render_template,tag_template)
+        with open(os.path.join(TEMP_DIR,tag_template),"w") as out_file:
+            text_to_write = tag_entry.extend()
+            if text_to_write == None:
+                continue
+            else: 
+                out_file.write(text_to_write)
+
+
+
+# --- RENDER FUNCTIONS ---
+#Consider making this a different file? It would be more organized overall
 def render_template(text:str):
     lines = text.split("\n")
     out_lines = []
@@ -77,36 +204,51 @@ def render_template(text:str):
         if line.strip().startswith("\\"):
             out_lines.append(line.strip()[1:len(line)])
         elif line.strip().startswith("extends"):
-            continue
+            pass
         else:
             out_lines.append(line)
-    return out_lines
-            
+    out_str = ""
+    for out_line in out_lines:
+        out_str += out_line + "\n"
+    return {"body":out_str}           
 
-#Deal with all of the templates by treating them as entries. 
-def process_templates():
-    #Open all the templates. 
-    templates = os.listdir(TEMPLATES_DIR)
-    for template_path in templates:
-        if template_path.endswith("default.html"):
-            shutil.copy(os.path.join(TEMPLATES_DIR,template_path),os.path.join(TEMP_DIR,template_path))
+def render_generic_entry(text:str):
+    lines = text.split("\n")
+    body_lines = []
+    title = ""
+    for line in lines:
+        if line.strip().startswith("\\"):
+            body_lines.append(line.strip()[1:len(line)])
+        elif line.strip().startswith("#"):            
+            title = line.strip()[1:len(line)].strip()
+            body_lines.append(title)
+        elif line.strip().startswith("extends"):
+            pass
+        elif line.strip().startswith("tags"):
+            pass
         else:
-            with open(os.path.join(TEMPLATES_DIR,template_path),"r") as template:
-                text = template.read()
-                template_entry = entry.constructor(text,
-                                                   render_template,
-                                                   entry.extractExtends(text))
-                with open(os.path.join(TEMP_DIR,template_path), "w") as out_template:
-                    out_template.write(template_entry.extend())
+            body_lines.append(line)
+
+    body_str = ""
+    for body_line in body_lines:
+        body_str += f"{body_line}\n"
+    return {"body": body_str,
+            "title": title}
 
 def main():
     print("Build starting...")
 
     initFolders()
+    print("Folders initialized")
 
     copyStaticFiles()
+    print("Static files copied")
 
     process_templates()
+    print("Templates rendered")
+
+    process_entries()
+    print("Entries processed")
 
     
 if __name__ == '__main__':

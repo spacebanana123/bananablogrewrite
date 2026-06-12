@@ -171,6 +171,7 @@ dist
 
 #python stuff
 .venv
+__pycache__
 
 #Playground to understand how code works/mess with concepts
 test.py
