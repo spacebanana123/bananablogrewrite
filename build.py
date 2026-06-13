@@ -1,6 +1,7 @@
 import os
 import shutil
 import operator
+import render
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(ROOT_DIR,"static")
@@ -102,6 +103,8 @@ class entry:
         #Open file and replace based on keys from rendered content.
         with open(template_path, "r") as template:
             final_content = template.read()
+            if render_level == -1: 
+                final_content = render.template(final_content)["body"]
             entry_rendered = self.render()
             for key in entry_rendered:
                 final_content = final_content.replace(f"<!--{key}-->",entry_rendered[key])
@@ -126,7 +129,7 @@ def processTemplates():
                 with open(os.path.join(TEMPLATES_DIR,template_path),"r") as template:
                     text = template.read()
                     template_entry = entry.constructor(text,
-                                                    renderTemplate,
+                                                    render.template,
                                                     entry.extractExtends(text))
                     with open(os.path.join(TEMP_TEMPLATES_DIR,template_path), "w") as out_template:
                         text_to_write = template_entry.extend()
@@ -160,7 +163,7 @@ def processEntries():
 
             #TODO: Finding render function needs implementation. Maybe another keyword would work. 
             #For now we will use a general function
-            renderer = renderGenericEntry
+            renderer = render.genericEntry
 
             tags = entry.extractTags(entry_text)
 
@@ -189,17 +192,20 @@ def processEntries():
             tag_template = f"{tag}.html" #We have a tag specific template
         else: 
             tag_template = "tag.html" #Use the default tag template
+
         tag_tracker[tag] = sorted(tag_tracker[tag], key=operator.methodcaller("key"))
+
+        entry_text = ""
         for tagged_entry in tag_tracker[tag]:
-            text_to_write = tagged_entry.render()["body"]
+            text_to_write = tagged_entry.extend(render_level = -1) #TODO: THIS IS BROKEN.
             if text_to_write == None:
                 continue
             else: 
                 entry_text += text_to_write
 
-        tag_entry = entry.constructor(entry_text,renderTag,tag_template)
+        tag_entry = entry.constructor(entry_text,render.tag,tag_template)
         with open(os.path.join(TEMP_DIR,f"{tag}.html"),"w") as out_file:
-            text_to_write = tag_entry.extend() #TODO: THIS IS BROKEN.
+            text_to_write = tag_entry.extend()
             if text_to_write == None:
                 continue
             else: 
@@ -215,71 +221,6 @@ def exportTempFolder():
             else: 
                 shutil.copy(os.path.join(TEMP_DIR,file), os.path.join(PUBLIC_DIR,file))
 
-# --- RENDER FUNCTIONS ---
-#Consider making this a different file? It would be more organized overall
-def renderTemplate(text:str):
-    lines = text.split("\n")
-    out_lines = []
-    for line in lines: 
-        if line.strip().startswith("\\"):
-            out_lines.append(line.strip()[1:len(line)])
-        elif line.strip().startswith("extends"):
-            pass
-        else:
-            out_lines.append(line)
-    out_str = ""
-    for out_line in out_lines:
-        out_str += out_line + "\n"
-    return {"body":out_str}          
- 
-def renderTag(text:str):
-    lines = text.split("\n")
-    out_lines = []
-    tag = ""
-    description = "None entered"
-    for line in lines: 
-        if line.strip().startswith("\\"):
-            out_lines.append(line.strip()[1:len(line)])
-        elif line.strip().startswith("tag"):
-            tag = line.strip().split(None, 1)[1]
-        elif line.strip().startswith("description"):
-            description = line.strip().split(None, 1)[1]
-        else:
-            out_lines.append(line)
-    out_str = ""
-    for out_line in out_lines:
-        out_str += out_line + "\n"
-    return {"body":out_str,
-            "title": tag,
-            "tag": tag,
-            "description": description}          
-
-def renderGenericEntry(text:str):
-    lines = text.split("\n")
-    body_lines = []
-    title = ""
-    keywords = ["extends", "tags", "date"]
-    for line in lines:
-        keyword_flag = False
-        for keyword in keywords:
-            if line.strip().startswith(keyword):
-                keyword_flag = True
-                break
-        if keyword_flag:
-            continue
-        if line.strip().startswith("\\"):
-            body_lines.append(line.strip()[1:len(line)])
-        elif line.strip().startswith("#"):            
-            title = line.strip()[1:len(line)].strip()
-            body_lines.append(title)
-        else:
-            body_lines.append(line)
-
-    body_str = ""
-    for body_line in body_lines:
-        body_str += f"{body_line}\n"
-    return {"body": body_str,
-            "title": title}
 
 def main():
     print("Build starting...")
