@@ -76,5 +76,6 @@ def genericEntry(text:str):
             out_dict[key] = out_str
     return internal_dict
 
-class line:
-    globalState = {}
+class subrender:
+    #this class renders individual lines with some amount of context information provided by the deligator.
+    def general(line: str):

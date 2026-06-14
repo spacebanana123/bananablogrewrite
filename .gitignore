@@ -177,5 +177,6 @@ __pycache__
 test.py
 test.txt
 
-#Removing rendered folder from updates. 
+#Removing out folders from repo. 
 public
+temp
