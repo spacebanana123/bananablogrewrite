@@ -37,27 +37,26 @@ def tag(text:str):
 
 def genericEntry(text:str):
     lines = text.split("\n")
-    body_lines = []
-    out_dict = {}
-    title = ""
-    line_num = 0
+    internal_dict = {}
+    render_type = None
     keywords = ["extends", "tags", "date"]
-    for i, line in enumerate(lines):
-        if not i <= line_num:
-            continue
+    for line in lines:
+        #Render type state mangement
         if line.strip().startswith("render"):
-            func_to_call = line.strip().split(None, 1)[1]
-            if func_to_call in dir():
-                render_out = globals()[func_to_call](text , i)
-                dict = render_out[0]
-                line_num = render_out[1]
-                for key in dict:
-                    if key == "body":
-                        body_line += dict["body"]
-                    else:
-                        out_dict[key] = dict[key]
+            render_type = line.strip().split(None, 1)[1]
             continue
-        #non-render keywords management
+        if line.strip().startswith("end render"):
+            render_type = None
+            continue
+        if type(render_type) == str:
+            render_dict = globals()[render_type](line)
+            for key in render_dict:
+                if key in internal_dict:
+                    internal_dict[key].append(render_dict[key])
+                else:
+                    internal_dict[key] = [render_dict[key]]
+        
+        #Clearing out all other keywords to bypass processing.
         keyword_flag = False
         for keyword in keywords:
             if line.strip().startswith(keyword):
@@ -65,17 +64,17 @@ def genericEntry(text:str):
                 break
         if keyword_flag:
             continue
-        if line.strip().startswith("\\"):
-            body_lines.append(line.strip()[1:len(line)])
-        elif line.strip().startswith("#"):            
-            title = line.strip()[1:len(line)].strip()
-            body_lines.append(title)
-        else:
-            body_lines.append(line)
+    
+    out_dict = {}
+    for key in internal_dict:
+        if len(internal_dict[key]) > 1:
+            out_dict[key] = internal_dict[key][0]
+        else: 
+            out_str = ""
+            for val in internal_dict[key]:
+                out_str += f"{val}\n"
+            out_dict[key] = out_str
+    return internal_dict
 
-    body_str = ""
-    for body_line in body_lines:
-        body_str += f"{body_line}\n"
-    out_dict["body"] = body_str
-    out_dict["title"] = title
-    return out_dict
+class line:
+    globalState = {}

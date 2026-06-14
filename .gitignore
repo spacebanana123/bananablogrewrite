@@ -176,3 +176,6 @@ __pycache__
 #Playground to understand how code works/mess with concepts
 test.py
 test.txt
+
+#Removing rendered folder from updates. 
+public

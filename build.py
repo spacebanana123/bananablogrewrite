@@ -85,7 +85,7 @@ class entry:
             if line.strip().startswith("date"):
                 date_entry = line.strip().split(None, 1)[1]
         return date_entry
-
+    
     #Semantic sugar for rendering out an entry.
     def render(self) -> dict:
         return self.renderer(self.text)
@@ -161,8 +161,7 @@ def processEntries():
             entry_text = entry_file.read()
             template = entry.extractExtends(entry_text)
 
-            #TODO: Finding render function needs implementation. Maybe another keyword would work. 
-            #For now we will use a general function
+            #This is fine as a constant render as the generic entry function finds the correct sub render to use on a line by line basis. 
             renderer = render.genericEntry
 
             tags = entry.extractTags(entry_text)
