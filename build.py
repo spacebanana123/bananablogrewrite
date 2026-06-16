@@ -87,12 +87,12 @@ class entry:
         return date_entry
     
     def extractPriority(text:str):
-        priority_entry = ""
+        priority_entry = 0
         lines = text.split("\n")
         for line in lines: 
             if line.strip().startswith("priority"):
                 priority_entry = line.strip().split(None, 1)[1]
-        return priority_entry
+        return int(priority_entry)
     
     #Semantic sugar for rendering out an entry.
     def render(self) -> dict:
@@ -114,10 +114,11 @@ class entry:
             if render_level == -1: 
                 final_content = render.template(final_content)["body"]
             entry_rendered = self.render()
+            if not tag == None:
+                entry_rendered["tag"] = tag
+                entry_rendered["title"] = tag
             for key in entry_rendered:
                 final_content = final_content.replace(f"<!--{key}-->",entry_rendered[key])
-            if not tag == None:
-                final_content = final_content.replace("<!--tag-->", tag)
             return final_content
 
 
@@ -176,9 +177,11 @@ def processEntries():
 
             tags = entry.extractTags(entry_text)
 
-            entry_date = entry.extractTags(entry_text)
+            entry_date = entry.extractDate(entry_text)
 
-            new_entry = entry.constructor(entry_text, renderer, template, tags,entry_date)
+            priority = entry.extractPriority(entry_text)
+
+            new_entry = entry.constructor(entry_text, renderer, template, tags,priority,entry_date)
             new_filename = file.split(".")[0] + ".html"
 
             #tracking globally across all files all tags and files associated with those tags.
@@ -202,7 +205,7 @@ def processEntries():
         else: 
             tag_template = "tag.html" #Use the default tag template
 
-        tag_tracker[tag] = sorted(tag_tracker[tag], key=operator.methodcaller("key"))
+        tag_tracker[tag] = sorted(tag_tracker[tag], reverse=True, key=operator.methodcaller("key"))
 
         entry_text = ""
         for tagged_entry in tag_tracker[tag]:

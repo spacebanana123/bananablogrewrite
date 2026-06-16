@@ -1,3 +1,5 @@
+import re
+
 keywords = ["extends", "tags", "date", "description", "priority"]
 
 def template(text:str):
@@ -52,6 +54,7 @@ def genericEntry(text:str):
     lines = text.split("\n")
     internal_dict = {}
     render_type = "general"
+    open_tags = []
     for line in lines:
         #Render type state mangement
         if line.strip().startswith("render"):
@@ -70,6 +73,16 @@ def genericEntry(text:str):
                     break
             if keyword_flag:
                 continue
+        
+        if len(line.strip()) == 0:
+            if "div" in open_tags:
+                internal_dict["body"].append("</div><div>")
+            else:
+                try:
+                    internal_dict["body"].append("<div>")
+                except:
+                    internal_dict["body"] = ["<div>"]
+                open_tags.append("div")
 
         render_func = getattr(subrender,render_type)
         render_dict = render_func(line)
@@ -82,6 +95,9 @@ def genericEntry(text:str):
     
     out_dict = {}
     for key in internal_dict:
+        if key == "title":
+            out_dict[key] = internal_dict[key][0]
+            continue
         if len(internal_dict[key]) == 1:
             out_dict[key] = internal_dict[key][0]
         else: 
@@ -89,6 +105,9 @@ def genericEntry(text:str):
             for val in internal_dict[key]:
                 out_str += f"{val}\n"
             out_dict[key] = out_str
+
+    for tag in open_tags:
+        out_dict["body"] += f"</{tag}>"
 
     return out_dict
 
@@ -130,6 +149,9 @@ class subrender:
         # Every line is a paragraph of its own, so if the line is not empty 
         # (with maybe more restrictions in the future)
         # we add p tags to both sides of the line
+        elif processed_line == len(processed_line) * "-" and len(processed_line) > 0:
+            return {"body":"<hr>"}
+
         elif len(processed_line) > 0:
             if "body" in out_dict:
                 out_dict["body"] += "<p>"
@@ -148,12 +170,37 @@ class subrender:
                 out_dict[key] += out_end_dict[key]
             else:
                 out_dict[key] = out_end_dict[key]
-
         return out_dict
     
     def index(line: str):
-        return subrender.general(line)
+        if line.startswith("display_tag_list"):
+            return ""
+        general_out = subrender.general(line)
+        if "title" in general_out:
+            general_out["title"] = "SpaceBanana"
+        return general_out
     def music(line: str):
+        import os
+        import helper
+        from datetime import datetime
+        ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        TEMP_DIR = os.path.join(ROOT_DIR, "temp")
+        if line.startswith("playlist"):
+            date = datetime.today().strftime('%Y-%m-%d')
+            playlists = helper.getPlaylist()
+            review_playlist = playlists[0]
+            study_playlist = playlists[1]
+            if line.split(None,1)[1].strip() == "update":
+                return{"body": f"<p>Last updated: {date}</p>"}
+            elif line.split(None,1)[1].strip() == "review":
+                with open(os.path.join(TEMP_DIR,"reviewed.m3u8"),"w",encoding='utf-8') as file:
+                    file.write(review_playlist.replace("<br","\n"))
+                return{"body": f"<p>{review_playlist}</p>"}
+            elif line.split(None,1)[1].strip() == "study":
+                with open(os.path.join(TEMP_DIR,"study.m3u8"),"w",encoding='utf-8') as file:
+                    file.write(study_playlist.replace("<br","\n"))
+                return{"body": f"<p>{study_playlist}</p>"}
         if line.startswith("review_score"):
             return {"body": f"<p>⭐{line.split(None,1)[1]}/10.0</p>"}
-        return subrender.general(line)
+        general_out = subrender.general(line)
+        return general_out
