@@ -1,0 +1,6 @@
+extends faq
+tags faq
+# Why are you interested in computer science? 
+I mean, I was around for the era where people were pushing everyone to code, so naturally I coded the classic beginners projects and "learningtocode" stuff. I don't think there was like a single kid that didn't want to run a Minecraft server or something similar then, so it did feel sort of like growing up with the internet so intertwined with my life made me naturally curious about it. 
+Beyond that, my current coding folder doesn't actually go that far since I'm on a different device and I wiped the device that I used to use. As far as I remember, I think I started with Scratch programs and then moved on to writing Python on a USB stick I was given. I know I got several Raspberry PIs, but I managed to brick all of them, which is a non-trivial task, and I have no idea how I failed to badly as to cause that, but I did. 
+Either way, the concept of writing code to do things I think really tapped into how I think about problems, but it also likely contributed to how I think about problems, which is a real chicken and egg situation. I personally think I probably started out thinking in the kind of loop of breaking down problems, trying something, and then fixing the errors, but then learning to program only amplified it.

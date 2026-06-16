@@ -1,0 +1,6 @@
+extends faq
+tags faq
+# Do you watch a lot of TV?
+No. My visual media consumption is internet > movies > TV.
+I think it should be pretty self evident from my <a href="/computer-science">post about computer science</a> that I'm pretty internet centric. I didn't grow up in the era of linear television nor mass market movies, so I never got used to them, but instead watch 2 hour long documentries on topics I have zero interest in, or doomscroll shortform content. 
+I also think an important point culturally is that my family doesn't watch TV nor movies. We don't have TV on in the backround when we eat dinner, or anything like that. The TV is (and was) almost never on in fact. The only time I remember watching movies with my parents was watching something like Star Wars, but that was very rare. It had to be something we were going out to see in particular. I do remember them showing me the Harry Potter series at home, and also The Matrix (which isn't really age appropriate for a young child, but whatever, my parents did a outstanding job either way), but never anything after that. 

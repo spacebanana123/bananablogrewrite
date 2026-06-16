@@ -86,13 +86,21 @@ class entry:
                 date_entry = line.strip().split(None, 1)[1]
         return date_entry
     
+    def extractPriority(text:str):
+        priority_entry = ""
+        lines = text.split("\n")
+        for line in lines: 
+            if line.strip().startswith("priority"):
+                priority_entry = line.strip().split(None, 1)[1]
+        return priority_entry
+    
     #Semantic sugar for rendering out an entry.
     def render(self) -> dict:
         return self.renderer(self.text)
     
     #Take rendered content and insert it into a template.
     #If render_level = -1, use the pre-rendering templates, instead of post rendering templates. 
-    def extend(self, render_level = 1) -> str:
+    def extend(self, render_level = 1,tag = None) -> str:
         #Setdir of template
         template_path = os.path.join(TEMP_TEMPLATES_DIR,self.extends)
         if render_level == -1:
@@ -101,13 +109,15 @@ class entry:
         if not os.path.isfile(template_path):
             return None
         #Open file and replace based on keys from rendered content.
-        with open(template_path, "r") as template:
+        with open(template_path, "r",encoding='utf-8') as template:
             final_content = template.read()
             if render_level == -1: 
                 final_content = render.template(final_content)["body"]
             entry_rendered = self.render()
             for key in entry_rendered:
                 final_content = final_content.replace(f"<!--{key}-->",entry_rendered[key])
+            if not tag == None:
+                final_content = final_content.replace("<!--tag-->", tag)
             return final_content
 
 
@@ -126,12 +136,12 @@ def processTemplates():
                 shutil.copy(os.path.join(TEMPLATES_DIR,template_path),os.path.join(TEMP_TEMPLATES_DIR,template_path))
             #If it isn't a default template, read it, pack it as a template entry and then have it extend whatever it is supposed to. 
             else:
-                with open(os.path.join(TEMPLATES_DIR,template_path),"r") as template:
+                with open(os.path.join(TEMPLATES_DIR,template_path),"r",encoding='utf-8') as template:
                     text = template.read()
                     template_entry = entry.constructor(text,
                                                     render.template,
                                                     entry.extractExtends(text))
-                    with open(os.path.join(TEMP_TEMPLATES_DIR,template_path), "w") as out_template:
+                    with open(os.path.join(TEMP_TEMPLATES_DIR,template_path), "w",encoding='utf-8') as out_template:
                         text_to_write = template_entry.extend()
                         if text_to_write == None:
                             #None means there is a missing template file
@@ -157,7 +167,7 @@ def processEntries():
         #4. Spit out processed html page for dedicated page for the entry. 
         #5. Spit out tag pages
         #6. Spit out index page that contains links to every tag and entry.
-        with open(os.path.join(ENTRIES_DIR,file)) as entry_file:
+        with open(os.path.join(ENTRIES_DIR,file),encoding='utf-8') as entry_file:
             entry_text = entry_file.read()
             template = entry.extractExtends(entry_text)
 
@@ -178,7 +188,7 @@ def processEntries():
                 except:
                     tag_tracker[tag] = [new_entry]
 
-            with open(os.path.join(TEMP_DIR,new_filename),"w") as out_file:
+            with open(os.path.join(TEMP_DIR,new_filename),"w",encoding='utf-8') as out_file:
                 text_to_write = new_entry.extend()
                 if text_to_write == None:
                     continue
@@ -188,7 +198,7 @@ def processEntries():
     #Writing tag pages. 
     for tag in tag_tracker:
         if os.path.exists(os.path.join(TEMP_TEMPLATES_DIR,f"{tag}.html")):
-            tag_template = f"{tag}.html" #We have a tag specific template
+            tag_template = f"{tag}_tag.html" #We have a tag specific template
         else: 
             tag_template = "tag.html" #Use the default tag template
 
@@ -196,15 +206,15 @@ def processEntries():
 
         entry_text = ""
         for tagged_entry in tag_tracker[tag]:
-            text_to_write = tagged_entry.extend(render_level = -1) #TODO: THIS IS BROKEN.
+            text_to_write = tagged_entry.extend(render_level = -1) 
             if text_to_write == None:
                 continue
             else: 
                 entry_text += text_to_write
 
         tag_entry = entry.constructor(entry_text,render.tag,tag_template)
-        with open(os.path.join(TEMP_DIR,f"{tag}.html"),"w") as out_file:
-            text_to_write = tag_entry.extend()
+        with open(os.path.join(TEMP_DIR,f"{tag}.html"),"w",encoding='utf-8') as out_file:
+            text_to_write = tag_entry.extend(1,tag.capitalize())
             if text_to_write == None:
                 continue
             else: 

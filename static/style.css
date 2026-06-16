@@ -93,3 +93,16 @@ body {
 .post-list{
 	list-style-type:none;
 }
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 768px) {
+	body {
+		font-size: 14px; /* Adjust base font size for better readability */
+	}
+	.header > div{
+		width: 90%;
+	}
+	.container > div{
+		width: 90%;
+	}
+}
