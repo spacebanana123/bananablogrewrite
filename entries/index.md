@@ -4,7 +4,7 @@ render index
 # About me
 Hi! I go by SpaceBanana online in all the various places. I wasn't around for the earliest creation of all the big internet sites, nor am I on all the internet sites, so take accounts that might be related to me with a grain of salt.
 While I personally think most of these aren't very useful, my MBTI is ENTP-A, and for the "Big Five" I have a 66 on neuroticism, 78 on Extraversion, 92 on openness to experience, 89 on agreeableness, and 90 on conscientiousness. What to make of that is your business, not mine.
-Happy to see you around. I wrote this using <a href="https://github.com/spacebanana123/BananaBlog">my own (messy) code</a>. Drop me an email at <a href="mailto:admin@spacebanana.dpdns.org">admin@spacebanana.dpdns.org</a>.
+Happy to see you around. I wrote this using <a href="https://github.com/spacebanana123/bananablogrewrite">my own (messy) code</a>. Drop me an email at <a href="mailto:admin@spacebanana.dpdns.org">admin@spacebanana.dpdns.org</a>.
 
 # Personal
 I might occassionally put out stuff about my personal life. All of it will go here.
