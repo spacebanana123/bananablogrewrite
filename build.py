@@ -41,7 +41,7 @@ def copyStaticFiles():
 #We treat both entries and templates as entries. Both extend other things and can be rendered out. 
 class entry:
     #TODO: Custom CSS support. 
-    def constructor(text:str,renderer:function = lambda x: x,extends:str = "default.html",tags:list = [],priority = 0,date = "yyyy-mm-dd hr:mm") -> entry:
+    def constructor(text:str,renderer = lambda x: x,extends:str = "default.html",tags:list = [],priority = 0,date = "yyyy-mm-dd hr:mm") -> entry:
         new_entry = entry()
         new_entry.extends = extends
         new_entry.tags = tags
