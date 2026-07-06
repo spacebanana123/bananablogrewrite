@@ -35,7 +35,7 @@ def copyStaticFiles():
         return
     
     #If we do, the flow ends up here, and we copy everthing.
-    shutil.copytree(STATIC_DIR,TEMP_DIR);
+    shutil.copytree(STATIC_DIR,TEMP_DIR,dirs_exist_ok = True);
 
 
 
