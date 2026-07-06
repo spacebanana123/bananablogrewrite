@@ -35,8 +35,9 @@ def copyStaticFiles():
         return
     
     #If we do, the flow ends up here, and we copy everthing.
-    for file in os.listdir(STATIC_DIR):
-        shutil.copy(os.path.join(STATIC_DIR,file),os.path.join(TEMP_DIR,file))
+    shutil.copytree(STATIC_DIR,TEMP_DIR);
+
+
 
 #We treat both entries and templates as entries. Both extend other things and can be rendered out. 
 class entry:
