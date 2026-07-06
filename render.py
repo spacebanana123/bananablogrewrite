@@ -118,6 +118,28 @@ class subrender:
         out_end_dict = {}
         processed_line = line.strip()
 
+        #Regex to do some basic markdown formating. 
+        
+        escaping_stars_regex = r"\\\*"
+
+        processed_line = re.sub(escaping_stars_regex,"_escaped_star_",processed_line)
+
+        em_and_b_regex = r"(\*{3})(.*?)(\1)"
+
+        processed_line = re.sub(em_and_b_regex,r"<b><em>\2</b></em>",processed_line)
+
+        b_regex = r"(\*{2})(.*?)(\1)"
+
+        processed_line = re.sub(b_regex,r"<b>\2</b>",processed_line)
+
+        em_regex = r"(\*{1})(.*?)(\1)"
+
+        processed_line = re.sub(em_regex,r"<em>\2</em>",processed_line)
+
+        unescaping_stars_regex = r"_escaped_star_"
+
+        processed_line = re.sub(unescaping_stars_regex,r"*", processed_line)
+
         header_num = 0
         if processed_line.startswith("#"):
             for (i,char) in enumerate(processed_line):
