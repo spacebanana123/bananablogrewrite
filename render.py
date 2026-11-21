@@ -1,4 +1,5 @@
 import re
+import os
 
 keywords = ["extends", "tags", "date", "description", "priority"]
 
@@ -85,6 +86,7 @@ def genericEntry(text:str):
                 open_tags.append("div")
 
         render_func = getattr(subrender,render_type)
+        print(render_type)
         render_dict = render_func(line)
         for key in render_dict:
             if key in internal_dict:
@@ -226,3 +228,25 @@ class subrender:
             return {"body": f"<p>⭐{line.split(None,1)[1]}/10.0</p>"}
         general_out = subrender.general(line)
         return general_out
+
+    def ranking(line: str):
+        ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        ENTRY_DIR = os.path.join(ROOT_DIR, "entries")
+        internal_list = []
+        for file in os.listdir(ENTRY_DIR):
+            with open(os.path.join(ENTRY_DIR,file)) as f:
+                text = f.read()
+                review_regex = r"(review_score) *(\d+\.*\d*)"
+                match = re.search(review_regex, text)
+                if match:
+                    ranking = match.group(2)
+                    name_regex = r"# (.*)"
+                    match = re.search(name_regex, text)
+                    name = match.group(1)
+                    internal_list.append((name, ranking))
+        sorted(internal_list, key=lambda x: x[1])
+        out_str = ""
+        for thing in internal_list:
+            out_str += thing[0] + " " + thing[1] + "<br>"
+
+        return {"body": out_str}
