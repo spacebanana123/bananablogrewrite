@@ -244,7 +244,7 @@ class subrender:
                     match = re.search(name_regex, text)
                     name = match.group(1)
                     internal_list.append((name, ranking))
-        sorted(internal_list, key=lambda x: x[1])
+        internal_list = sorted(internal_list, key=lambda x: x[1])
         out_str = ""
         for thing in internal_list:
             out_str += thing[0] + " " + thing[1] + "<br>"
