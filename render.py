@@ -55,6 +55,7 @@ def genericEntry(text:str):
     lines = text.split("\n")
     internal_dict = {}
     render_type = "general"
+    need_open_dict = False
     open_tags = []
     for line in lines:
         #Render type state mangement
@@ -76,17 +77,20 @@ def genericEntry(text:str):
                 continue
         
         if len(line.strip()) == 0:
-            if "div" in open_tags:
-                internal_dict["body"].append("</div><div>")
-            else:
-                try:
-                    internal_dict["body"].append("<div>")
-                except:
-                    internal_dict["body"] = ["<div>"]
-                open_tags.append("div")
+            need_open_dict = True
+        else:
+            if need_open_dict:
+                if "div" in open_tags:
+                    internal_dict["body"].append("</div><div>")
+                else:
+                    try:
+                        internal_dict["body"].append("<div>")
+                    except:
+                        internal_dict["body"] = ["<div>"]
+                    open_tags.append("div")
+                need_open_dict = False
 
         render_func = getattr(subrender,render_type)
-        print(render_type)
         render_dict = render_func(line)
         for key in render_dict:
             if key in internal_dict:
@@ -243,10 +247,10 @@ class subrender:
                     name_regex = r"# (.*)"
                     match = re.search(name_regex, text)
                     name = match.group(1)
-                    internal_list.append((name, ranking))
-        internal_list = sorted(internal_list, key=lambda x: x[1])
+                    internal_list.append((name, float(ranking)))
+        internal_list = sorted(internal_list, key=lambda x: x[1], reverse=True)
         out_str = ""
         for thing in internal_list:
-            out_str += thing[0] + " " + thing[1] + "<br>"
+            out_str += thing[0] + " " + str(thing[1]) + "<br>"
 
         return {"body": out_str}
